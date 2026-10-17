@@ -28,3 +28,18 @@ enum ServerMessage {
     StopSession { session_id: String },
     Error { message: String },
 }
+
+// Make the connection
+pub fn url_connection(server_url: &str) -> Result<Sting> {
+    let base = server_url.trim_end_matches('/');
+
+    if let Some(rest) = base.strip_prefix("https://") {
+        Ok(format!("wss://{rest}/ws/worker"))
+    } else if let Some(rest) = base.strip_prefix("http://") {
+        Ok(format!("ws://{rest}/ws/worker"))
+    } else if base.starts_with("ws://") || base.starts_with("wss://") {
+        Ok(format!("{base}/ws/worker"))
+    } else {
+        Err(anyhow!("Unsupported server URL: {base}"))
+    }
+}
