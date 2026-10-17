@@ -30,7 +30,7 @@ enum ServerMessage {
 }
 
 // Make the connection
-pub fn url_connection(server_url: &str) -> Result<Sting> {
+fn url_connection(server_url: &str) -> Result<Sting> {
     let base = server_url.trim_end_matches('/');
 
     if let Some(rest) = base.strip_prefix("https://") {
@@ -41,5 +41,128 @@ pub fn url_connection(server_url: &str) -> Result<Sting> {
         Ok(format!("{base}/ws/worker"))
     } else {
         Err(anyhow!("Unsupported server URL: {base}"))
+    }
+}
+
+pub fn Heartbeat_message(config: AgentMessage) -> Result<()> {
+    let server = url_connection(&config.server_url)?;
+
+    loop {
+        println!("Connected to the server");
+    }
+}
+
+async fn connect_and_run(
+    config: &AgentConfig,
+    ws_url: &str,
+) -> Result<()> {
+    let (ws_stream, _) = connect_async(ws_url).await?;
+
+    println!("Connected to CloudRig server!");
+
+    let (mut write, mut read) = ws_stream.split();
+
+    // Identify this worker to the server.
+    let registration = AgentMessage::Register {
+        worker_id: config.worker_id.clone(),
+        max_sessions: config.max_sessions,
+    };
+
+    write
+        .send(Message::Text(
+            serde_json::to_string(&registration)?.into(),
+        ))
+        .await?;
+
+    println!("Registration message sent.");
+
+    let mut heartbeat = interval(Duration::from_secs(10));
+
+    // The first interval tick is immediate; skip it because
+    // registration has just been sent.
+    heartbeat.tick().await;
+
+    loop {
+        tokio::select! {
+            _ = heartbeat.tick() => {
+                let message = AgentMessage::Heartbeat {
+                    worker_id: config.worker_id.clone(),
+                    active_sessions: 0,
+                };
+
+                write
+                    .send(Message::Text(
+                        serde_json::to_string(&message)?.into(),
+                    ))
+                    .await?;
+
+                println!("Heartbeat sent.");
+            }
+
+            incoming = read.next() => {
+                match incoming {
+                    Some(Ok(Message::Text(text))) => {
+                        let raw = text.to_string();
+
+                        match serde_json::from_str::<ServerMessage>(&raw) {
+                            Ok(ServerMessage::Registered) => {
+                                println!("Server confirmed registration.");
+                            }
+
+                            Ok(ServerMessage::StartSession {
+                                session_id,
+                                game_id,
+                            }) => {
+                                println!(
+                                    "Received START_SESSION: \
+                                     session={session_id}, game={game_id}"
+                                );
+
+                                println!(
+                                    "Game launching is not implemented yet."
+                                );
+                            }
+
+                            Ok(ServerMessage::StopSession {
+                                session_id,
+                            }) => {
+                                println!(
+                                    "Received STOP_SESSION: {session_id}"
+                                );
+                            }
+
+                            Ok(ServerMessage::Error { message }) => {
+                                eprintln!("Server error: {message}");
+                            }
+
+                            Err(error) => {
+                                eprintln!(
+                                    "Unrecognized server message: \
+                                     {error}; payload={raw}"
+                                );
+                            }
+                        }
+                    }
+
+                    Some(Ok(Message::Ping(payload))) => {
+                        write.send(Message::Pong(payload)).await?;
+                    }
+
+                    Some(Ok(Message::Pong(_))) => {}
+
+                    Some(Ok(Message::Close(_))) | None => {
+                        return Err(anyhow!(
+                            "WebSocket connection closed by server"
+                        ));
+                    }
+
+                    Some(Ok(_)) => {}
+
+                    Some(Err(error)) => {
+                        return Err(error.into());
+                    }
+                }
+            }
+        }
     }
 }
