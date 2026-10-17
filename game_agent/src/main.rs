@@ -3,6 +3,7 @@ mod worker;
 
 use config::AgentConfig;
 use worker::Worker;
+mod network;
 
 #[tokio::main]
 async fn main() {
@@ -17,6 +18,7 @@ async fn main() {
     println!("Worker ID: {}", worker.id);
     println!("Server URL: {}", config.server_url);
     println!("Maximum sessions: {}", worker.max_sessions);
-    println!("Active sessions: {}", worker.active_sessions);
-    println!("Status: {:?}", worker.status);
+
+
+    network::run(config).await;
 }
