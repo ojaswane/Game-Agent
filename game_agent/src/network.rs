@@ -45,10 +45,22 @@ fn url_connection(server_url: &str) -> Result<Sting> {
 }
 
 pub fn Heartbeat_message(config: AgentMessage) -> Result<()> {
-    let server = url_connection(&config.server_url)?;
+    let ws_url = url_connection(&config.server_url)?;
 
     loop {
         println!("Connected to the server");
+
+        match connect_and_run(&config, &ws_url).await {
+            Ok(()) => {
+                println!("WebSocket connection closed.");
+            }
+            Err(error) => {
+                eprintln!("Agent network error: {error:#}");
+            }
+        }
+
+        println!("Reconnecting in 5 seconds...");
+        sleep(Duration::from_secs(5)).await;
     }
 }
 
@@ -115,7 +127,7 @@ async fn connect_and_run(
                             }) => {
                                 println!(
                                     "Received START_SESSION: \
-                                     session={session_id}, game={game_id}"
+                                    session={session_id}, game={game_id}"
                                 );
 
                                 println!(
@@ -138,7 +150,7 @@ async fn connect_and_run(
                             Err(error) => {
                                 eprintln!(
                                     "Unrecognized server message: \
-                                     {error}; payload={raw}"
+                                    {error}; payload={raw}"
                                 );
                             }
                         }
