@@ -1,8 +1,8 @@
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
-pub struct worker {
-    pub id: string,
+pub struct Worker {
+    pub id: String,
     pub status: WorkerStatus,
     pub max_sessions: usize,
     pub active_sessions: usize,
@@ -11,15 +11,15 @@ pub struct worker {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkerStatus {
-    online,
-    offline,
+    Online,
+    Offline,
 }
 
-impl worker {
+impl Worker {
     pub fn new(id: String, max_sessions: usize) -> Self {
         Self {
             id,
-            status: WorkerStatus::online,
+            status: WorkerStatus::Online,
             max_sessions,
             active_sessions: 0,
         }

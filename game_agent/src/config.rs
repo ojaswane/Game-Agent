@@ -1,8 +1,8 @@
 use std::env;
 
 pub struct AgentConfig {
-    pub server_url: string,
-    pub worker_id: string,
+    pub server_url: String,
+    pub worker_id: String,
     pub max_sessions: usize,
 }
 
