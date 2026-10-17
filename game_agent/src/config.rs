@@ -13,14 +13,13 @@ impl AgentConfig{
             server_url: env::var("SERVER_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:3000".to_string()),
 
-            worker_id: env::var("CLOUDRIG_WORKER_ID")
+            worker_id: env::var("WORKER_ID")
                 .unwrap_or_else(|_| "gaming-pc-01".to_string()),
 
-            max_sessions: env::var("CLOUDRIG_MAX_SESSIONS")
+            max_sessions: env::var("MAX_SESSIONS")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(1),
         }
     }
 }
-\
