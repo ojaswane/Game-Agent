@@ -12,7 +12,17 @@ pub struct worker {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkerStatus{
-    Online,
-    Offline
+    online,
+    offline
 }
 
+impl worker {
+    pub fn new(id: String, max_sessions: usize) -> Self {
+        Self{
+            id ,
+            status : WorkerStatus:online,
+            max_sessions,
+            active_sessions: 0,
+        }
+    }
+}
