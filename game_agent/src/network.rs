@@ -30,7 +30,7 @@ enum ServerMessage {
 }
 
 // Make the connection
-fn url_connection(server_url: &str) -> Result<Sting> {
+fn url_connection(server_url: &str) -> Result<String> {
     let base = server_url.trim_end_matches('/');
 
     if let Some(rest) = base.strip_prefix("https://") {
@@ -44,7 +44,7 @@ fn url_connection(server_url: &str) -> Result<Sting> {
     }
 }
 
-pub fn Heartbeat_message(config: AgentMessage) -> Result<()> {
+pub async fn run(config: AgentConfig) -> Result<()> {
     let ws_url = url_connection(&config.server_url)?;
 
     loop {

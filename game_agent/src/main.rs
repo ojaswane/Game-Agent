@@ -6,7 +6,7 @@ use worker::Worker;
 mod network;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let config = AgentConfig::from_env();
 
     let worker = Worker::new(
@@ -20,5 +20,6 @@ async fn main() {
     println!("Maximum sessions: {}", worker.max_sessions);
 
 
-    network::run(config).await;
+    network::run(config).await?;
+    Ok(())
 }
