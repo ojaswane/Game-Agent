@@ -6,9 +6,11 @@ rtmpAddress: :1935
 hls: no
 
 webrtc: yes
+
+# This is for browser connection setup
 webrtcAddress: :8889
 webrtcLocalUDPAddress: :8189
-# For playback from another computer, replace this with the server laptop's
+# TODO ; For playback from another computer, replace this with the server laptop's
 # LAN IP. For internet access, use the server's public IP/domain and configure
 # firewall/NAT plus STUN/TURN as required by your network.
 webrtcIPsFromInterfaces: no
