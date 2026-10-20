@@ -4,7 +4,6 @@ mod worker;
 use config::AgentConfig;
 use worker::Worker;
 mod network;
-mod games;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
