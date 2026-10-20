@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game stream viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font: 16px system-ui, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: #0b1020;
+      color: #e8edf7;
+    }
+
+    main {
+      max-width: 960px;
+      margin: auto;
+    }
+
+    form {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+
+    label {
+      display: grid;
+      gap: .35rem;
+    }
+
+    input,
+    button {
+      padding: .7rem;
+      border: 1px solid #52617d;
+      border-radius: .4rem;
+    }
+
+    input {
+      min-width: 15rem;
+      background: #151e32;
+      color: inherit;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+    }
+
+    iframe {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      background: black;
+    }
+
+    #status {
+      color: #b9c7df;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Game stream viewer</h1>
+    <p>Enter the session ID sent to the gaming agent. For another computer, set the MediaMTX address to the server
+      laptop's LAN IP.</p>
+    <form id="watch-form">
+      <label>MediaMTX address
+        <input id="server" value="http://localhost:8889" required>
+      </label>
+      <label>Session ID
+        <input id="session" placeholder="for example abc123" required pattern="[A-Za-z0-9_-]+">
+      </label>
+      <button type="submit">Watch</button>
+    </form>
+    <p id="status">Start a session, then enter its ID above.</p>
+    <iframe id="player" title="Live game stream" allow="autoplay; fullscreen; picture-in-picture"
+      allowfullscreen></iframe>
+  </main>
+  <script>
+    const form = document.querySelector("#watch-form");
+    const server = document.querySelector("#server");
+    const session = document.querySelector("#session");
+    const player = document.querySelector("#player");
+    const status = document.querySelector("#status");
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const streamId = session.value.trim();
+      if (!/^[A-Za-z0-9_-]+$/.test(streamId)) {
+        status.textContent = "Session IDs can contain letters, numbers, underscores, and hyphens.";
+        return;
+      }
+      const base = server.value.trim().replace(/\/+$/, "");
+      if (!/^https?:\/\//.test(base)) {
+        status.textContent = "MediaMTX address must start with http:// or https://.";
+        return;
+      }
+      player.src = `${base}/live/${encodeURIComponent(streamId)}?autoplay=true&muted=true`;
+      status.textContent = `Connecting to session ${streamId}…`;
+    });
+  </script>
+</body>
+
+</html>
