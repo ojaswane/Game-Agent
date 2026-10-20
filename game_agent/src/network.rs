@@ -1,10 +1,12 @@
 use anyhow::{anyhow, Result};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tokio::time::{interval, sleep, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use crate::config::AgentConfig;
+use crate::streaming::StreamProcess;
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -89,6 +91,7 @@ async fn connect_and_run(
     println!("Registration message sent.");
 
     let mut heartbeat = interval(Duration::from_secs(10));
+    let mut sessions: HashMap<String, StreamProcess> = HashMap::new();
 
     // The first interval tick is immediate; skip it because
     // registration has just been sent.
@@ -99,7 +102,7 @@ async fn connect_and_run(
             _ = heartbeat.tick() => {
                 let message = AgentMessage::Heartbeat {
                     worker_id: config.worker_id.clone(),
-                    active_sessions: 0,
+                    active_sessions: sessions.len(),
                 };
 
                 write
@@ -130,17 +133,35 @@ async fn connect_and_run(
                                     session={session_id}, game={game_id}"
                                 );
 
-                                println!(
-                                    "Game launching is not implemented yet."
-                                );
+                                if sessions.contains_key(&session_id) {
+                                    eprintln!("Session {session_id} is already streaming");
+                                    continue;
+                                }
+
+                                match StreamProcess::start(config, &session_id).await {
+                                    Ok(stream) => {
+                                        println!("Publishing session {session_id} to {}", stream.publish_url);
+                                        sessions.insert(session_id, stream);
+                                    }
+                                    Err(error) => {
+                                        eprintln!("Could not start stream for {session_id}: {error:#}");
+                                    }
+                                }
                             }
 
                             Ok(ServerMessage::StopSession {
                                 session_id,
                             }) => {
-                                println!(
-                                    "Received STOP_SESSION: {session_id}"
-                                );
+                                match sessions.remove(&session_id) {
+                                    Some(stream) => {
+                                        if let Err(error) = stream.stop().await {
+                                            eprintln!("Failed to stop stream {session_id}: {error:#}");
+                                        } else {
+                                            println!("Stopped stream for session {session_id}");
+                                        }
+                                    }
+                                    None => println!("No active stream for session {session_id}"),
+                                }
                             }
 
                             Ok(ServerMessage::Error { message }) => {

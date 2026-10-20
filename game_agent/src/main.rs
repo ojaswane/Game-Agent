@@ -1,10 +1,10 @@
 mod config;
 mod worker;
+mod streaming;
 
 use config::AgentConfig;
 use worker::Worker;
 mod network;
--O
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = AgentConfig::from_env();
