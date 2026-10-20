@@ -21,6 +21,7 @@ impl StreamProcess {
         if base.is_empty() {
             bail!("STREAM_PUBLISH_URL must point to the streaming host's RTMP ingest");
         }
+        
         let publish_url = format!("{base}/{session_id}");
 
         let mut command = Command::new("ffmpeg");
