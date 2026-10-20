@@ -21,13 +21,14 @@ impl StreamProcess {
         if base.is_empty() {
             bail!("STREAM_PUBLISH_URL must point to the streaming host's RTMP ingest");
         }
-        
+
         let publish_url = format!("{base}/{session_id}");
 
         let mut command = Command::new("ffmpeg");
+        // For testing purpose , we are using RDR2
         command.args([
             "-hide_banner", "-loglevel", "warning", "-f", "gdigrab",
-            "-framerate", "30", "-draw_mouse", "1", "-i", "desktop",
+            "-framerate", "30", "-draw_mouse", "1", "-i", "title=Red Dead Redemption 2",
         ]);
         if let Some(device) = &config.audio_device {
             command.args(["-f", "dshow", "-i", device]);
