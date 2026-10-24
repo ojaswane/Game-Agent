@@ -1,6 +1,5 @@
 mod config;
 mod worker;
-mod streaming;
 
 use config::AgentConfig;
 use worker::Worker;
