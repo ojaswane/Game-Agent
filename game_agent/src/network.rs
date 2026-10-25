@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Result};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use tokio::time::{interval, sleep, Duration};
+use tokio::time::{interval, sleep, timeout, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
+use url::Url;
 
 use crate::config::AgentConfig;
 
@@ -13,11 +14,11 @@ enum AgentMessage {
         worker_id: String,
         max_sessions: usize,
     },
+}
 
-    Heartbeat {
-        worker_id: String,
-        active_sessions: usize,
-    },
+#[derive(Debug, Serialize)]
+struct HeartbeatRequest {
+    active_sessions: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,6 +43,28 @@ fn url_connection(server_url: &str) -> Result<String> {
     } else {
         Err(anyhow!("Unsupported server URL: {base}"))
     }
+}
+
+fn heartbeat_endpoint(server_url: &str, worker_id: &str) -> Result<String> {
+    let mut endpoint = Url::parse(server_url)?;
+    match endpoint.scheme() {
+        "http" | "https" => {}
+        "ws" => endpoint.set_scheme("http").map_err(|_| anyhow!("Invalid worker server URL"))?,
+        "wss" => endpoint.set_scheme("https").map_err(|_| anyhow!("Invalid worker server URL"))?,
+        scheme => return Err(anyhow!("Unsupported server URL scheme for heartbeat: {scheme}")),
+    }
+
+    endpoint.set_query(None);
+    endpoint.set_fragment(None);
+    endpoint
+        .path_segments_mut()
+        .map_err(|_| anyhow!("Worker server URL cannot contain path segments"))?
+        .pop_if_empty()
+        .push("workers")
+        .push(worker_id)
+        .push("heartbeat");
+
+    Ok(endpoint.into())
 }
 
 pub async fn run(config: AgentConfig) -> Result<()> {
@@ -69,8 +92,12 @@ async fn connect_and_run(
     ws_url: &str,
 ) -> Result<()> {
     let (ws_stream, _) = connect_async(ws_url).await?;
+    let heartbeat_url = heartbeat_endpoint(&config.server_url, &config.worker_id)?;
+    let http_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .build()?;
 
-    println!("Connected to CloudRig server!");
+    println!("Connected to server!");
 
     let (mut write, mut read) = ws_stream.split();
 
@@ -97,18 +124,21 @@ async fn connect_and_run(
     loop {
         tokio::select! {
             _ = heartbeat.tick() => {
-                let message = AgentMessage::Heartbeat {
-                    worker_id: config.worker_id.clone(),
+                let payload = HeartbeatRequest {
                     active_sessions: 0,
                 };
 
-                write
-                    .send(Message::Text(
-                        serde_json::to_string(&message)?.into(),
-                    ))
-                    .await?;
-
-                println!("Heartbeat sent.");
+                match timeout(
+                    Duration::from_secs(4),
+                    http_client.post(&heartbeat_url).json(&payload).send(),
+                ).await {
+                    Ok(Ok(response)) => match response.error_for_status() {
+                        Ok(_) => println!("HTTP heartbeat sent."),
+                        Err(error) => eprintln!("HTTP heartbeat failed: {error}"),
+                    },
+                    Ok(Err(error)) => eprintln!("HTTP heartbeat failed: {error}"),
+                    Err(_) => eprintln!("HTTP heartbeat timed out"),
+                }
             }
 
             incoming = read.next() => {
