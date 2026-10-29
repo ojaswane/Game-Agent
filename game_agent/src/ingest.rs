@@ -26,5 +26,5 @@ pub fn capture_game() {
         .stderr(Stdio::piped())
         .spawn()?;
 
-    println!("FFmpeg capture started. Press Ctrl+C to stop...");
+    println!("FFmpeg capture started.");
 }
