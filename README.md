@@ -34,18 +34,19 @@ The agent does not currently open a WebSocket at startup. Its session WebSocket 
 
 ## Local Windows capture prototype
 
-Install FFmpeg with the `gdigrab` input and `libx264` encoder available on `PATH`, then run:
+Install FFmpeg with the `gdigrab` and `wasapi` inputs, and `libx264` and AAC encoders available on `PATH`, then run:
 
 ```powershell
 cargo run -- --capture
 ```
 
-This captures the desktop at 60 fps into `capture.mp4` in the current directory. Press Ctrl+C to stop and finalize the MP4. To capture a window by its title and/or change the output path:
+This captures the desktop at 60 fps and the default Windows playback device's loopback audio into `capture.mp4` in the current directory. The audio is the whole output-device mix, not isolated to the game. Press Ctrl+C to stop and finalize the MP4. To capture a window by its title, choose a WASAPI device, and/or change the output path:
 
 ```powershell
 $env:GAME_CAPTURE_INPUT = "title=Red Dead Redemption 2"
+$env:GAME_CAPTURE_AUDIO_DEVICE = "default"
 $env:GAME_CAPTURE_OUTPUT = "D:\captures\game.mp4"
 cargo run -- --capture
 ```
 
-This is a local file-capture prototype only; it does not yet send video over WebRTC.
+Set `GAME_CAPTURE_AUDIO_DEVICE` to a WASAPI playback-device name to capture that device instead of the default. Use FFmpeg's WASAPI device listing to find available names. This is a local file-capture prototype only; it does not yet send video over WebRTC.

@@ -7,7 +7,9 @@ use tokio::{
 };
 
 pub async fn ingest() -> Result<()> {
-    let input = env::var("GAME_CAPTURE_INPUT").unwrap_or_else(|_| "desktop".to_string());
+    let video_input = env::var("GAME_CAPTURE_INPUT").unwrap_or_else(|_| "desktop".to_string());
+    let audio_device =
+        env::var("GAME_CAPTURE_AUDIO_DEVICE").unwrap_or_else(|_| "default".to_string());
     let output = env::var("GAME_CAPTURE_OUTPUT").unwrap_or_else(|_| "capture.mp4".to_string());
 
     let mut child = Command::new("ffmpeg")
@@ -18,7 +20,17 @@ pub async fn ingest() -> Result<()> {
             "-framerate",
             "60",
             "-i",
-            &input,
+            &video_input,
+            "-f",
+            "wasapi",
+            "-loopback",
+            "1",
+            "-i",
+            &audio_device,
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
             "-c:v",
             "libx264",
             "-preset",
@@ -29,6 +41,12 @@ pub async fn ingest() -> Result<()> {
             "23",
             "-pix_fmt",
             "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "160k",
+            "-ar",
+            "48000",
             "-movflags",
             "+faststart",
             &output,
@@ -37,9 +55,11 @@ pub async fn ingest() -> Result<()> {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .context("Could not start FFmpeg.")?;
+        .context("Could not start FFmpeg. Make sure ffmpeg.exe is installed and on PATH.")?;
 
-    println!("Capturing {input} to {output}.");
+    println!(
+        "Capturing video from {video_input} and audio from WASAPI device {audio_device} to {output}."
+    );
 
     tokio::select! {
         result = child.wait() => {
