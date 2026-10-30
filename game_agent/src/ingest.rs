@@ -14,8 +14,8 @@ pub async fn ingest() -> Result<()> {
         env::var("GAME_CAPTURE_AUDIO_DEVICE").unwrap_or_else(|_| "default".to_string());
     let output = env::var("GAME_CAPTURE_OUTPUT").unwrap_or_else(|_| "capture.mp4".to_string());
 
-    let height = 1280usize;
-    let width = 720usize;
+    let width = 1280usize;
+    let height = 720usize;
 
     // YUV420P: 1.5 bytes per pixel.
     let frame_size = width * height * 3 / 2;
@@ -72,11 +72,34 @@ pub async fn ingest() -> Result<()> {
         "Capturing video from {video_input} and audio from WASAPI device {audio_device} to {output}."
     );
 
+    loop {
+        match stdout.read_exact(&mut frame).await {
+            Ok(_) => {
+                frame_number += 1;
+
+                if frame_number % 60 == 0 {
+                    println!("Captured {frame_number} frames");
+                }
+
+                // One complete YUV420P frame is now in `frame`.
+                // Next: feed frames into the video encoder/WebRTC pipeline.
+            }
+            Err(error)
+                if error.kind() == std::io::ErrorKind::UnexpectedEof =>
+            {
+                break;
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
+
+    
     tokio::select! {
         result = child.wait() => {
             let status = result.context("Failed while waiting for FFmpeg")?;
             if status.success() {
                 Ok(())
+
             } else {
                 Err(anyhow!("FFmpeg exited with status {status}"))
             }
@@ -99,4 +122,5 @@ pub async fn ingest() -> Result<()> {
             }
         }
     }
+
 }
