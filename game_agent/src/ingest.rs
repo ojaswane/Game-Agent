@@ -3,7 +3,7 @@ use std::process::{Command, Stdio};
 
 pub fn ingest() {
     // captured and encoded game data into data packets
-    let mut child = command::new("ffmpeg")
+    let mut child = Command::new("ffmpeg")
         .args([
             "-y", // Overwrite output file
             "-f",
