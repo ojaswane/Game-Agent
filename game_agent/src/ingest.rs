@@ -6,11 +6,19 @@ use tokio::{
     time::{Duration, timeout},
 };
 
+// ffmpeg -f gdigrab -framerate 60 -i desktop -an -vf scale=1280:720 -pix_fmt yuv420p -f rawvideo pipe:1 > NUL : COMMAND FOR POWERSHELL
+
 pub async fn ingest() -> Result<()> {
     let video_input = env::var("GAME_CAPTURE_INPUT").unwrap_or_else(|_| "desktop".to_string());
     let audio_device =
         env::var("GAME_CAPTURE_AUDIO_DEVICE").unwrap_or_else(|_| "default".to_string());
     let output = env::var("GAME_CAPTURE_OUTPUT").unwrap_or_else(|_| "capture.mp4".to_string());
+
+    let height = 1280usize;
+    let width = 720usize;
+
+    // YUV420P: 1.5 bytes per pixel.
+    let frame_size = width * height * 3 / 2;
 
     let mut child = Command::new("ffmpeg")
         .args([
@@ -56,6 +64,9 @@ pub async fn ingest() -> Result<()> {
         .stderr(Stdio::inherit())
         .spawn()
         .context("Could not start FFmpeg. Make sure ffmpeg.exe is installed and on PATH.")?;
+
+    let mut frame = vec![0u8; frame_size];
+    let mut frame_number = 0u64;
 
     println!(
         "Capturing video from {video_input} and audio from WASAPI device {audio_device} to {output}."
