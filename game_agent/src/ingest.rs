@@ -1,7 +1,8 @@
 // Capture the game screen → encode each frame as video → send the encoded frames over a WebRTC connection.
 use std::process::{Command, Stdio};
 
-pub fn capture_game() {
+pub fn ingest() {
+    // captured and encoded game data into data packets
     let mut child = command::new("ffmpeg")
         .args([
             "-y", // Overwrite output file
@@ -12,7 +13,7 @@ pub fn capture_game() {
             "-video_size",
             "1920x1080", // Capture resolution
             "-i",
-            "desktop", // Capture the entire desktop (or game window)
+            "Red Dead Redemption 2", // Capture the entire desktop (or game window)
             "-c:v",
             "libx264", // Encode video using H.264
             "-preset",
