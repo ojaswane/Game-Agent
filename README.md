@@ -31,3 +31,21 @@ The worker ID is part of the URL, so it is not repeated in the body. The current
 The previous MediaMTX, RTMP publishing, and test-server setup has been removed. The next implementation step is to agree on the signaling messages that the control server can relay between the worker and the browser (offer, answer, and ICE candidates).
 
 The agent does not currently open a WebSocket at startup. Its session WebSocket routes require an assigned session ID, and this repository does not include a server API or persistent connection that tells the agent when a session is assigned. Session assignment and WebRTC signaling therefore require a matching server-side protocol before they can be handled by the agent.
+
+## Local Windows capture prototype
+
+Install FFmpeg with the `gdigrab` input and `libx264` encoder available on `PATH`, then run:
+
+```powershell
+cargo run -- --capture
+```
+
+This captures the desktop at 60 fps into `capture.mp4` in the current directory. Press Ctrl+C to stop and finalize the MP4. To capture a window by its title and/or change the output path:
+
+```powershell
+$env:GAME_CAPTURE_INPUT = "title=Red Dead Redemption 2"
+$env:GAME_CAPTURE_OUTPUT = "D:\captures\game.mp4"
+cargo run -- --capture
+```
+
+This is a local file-capture prototype only; it does not yet send video over WebRTC.

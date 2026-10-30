@@ -1,31 +1,71 @@
-// Capture the game screen → encode each frame as video → send the encoded frames over a WebRTC connection.
-use std::process::{Command, Stdio};
+use anyhow::{Context, Result, anyhow};
+use std::{env, process::Stdio};
+use tokio::{
+    io::AsyncWriteExt,
+    process::Command,
+    time::{Duration, timeout},
+};
 
-pub fn ingest() {
-    // captured and encoded game data into data packets
+pub async fn ingest() -> Result<()> {
+    let input = env::var("GAME_CAPTURE_INPUT").unwrap_or_else(|_| "desktop".to_string());
+    let output = env::var("GAME_CAPTURE_OUTPUT").unwrap_or_else(|_| "capture.mp4".to_string());
+
     let mut child = Command::new("ffmpeg")
         .args([
-            "-y", // Overwrite output file
+            "-y",
             "-f",
-            "gdigrab", // Screen capture device (Windows)
+            "gdigrab",
             "-framerate",
-            "60", // Target 60 frames per second
-            "-video_size",
-            "1920x1080", // Capture resolution
+            "60",
             "-i",
-            "Red Dead Redemption 2", // Capture the entire desktop (or game window)
+            &input,
             "-c:v",
-            "libx264", // Encode video using H.264
+            "libx264",
             "-preset",
-            "ultrafast", // Low CPU overhead for real-time capture
+            "ultrafast",
+            "-tune",
+            "zerolatency",
             "-crf",
-            "23",                        // Quality setting
-            "Red Dead Redemption 2.exe", // Output file (for testing purpose )
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            &output,
         ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .context("Could not start FFmpeg.")?;
 
-    println!("FFmpeg capture started.");
+    println!("Capturing {input} to {output}.");
+
+    tokio::select! {
+        result = child.wait() => {
+            let status = result.context("Failed while waiting for FFmpeg")?;
+            if status.success() {
+                Ok(())
+            } else {
+                Err(anyhow!("FFmpeg exited with status {status}"))
+            }
+        }
+        signal = tokio::signal::ctrl_c() => {
+            signal.context("Failed to listen for Ctrl+C")?;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(b"q\n").await.context("Failed to stop FFmpeg gracefully")?;
+            }
+
+            match timeout(Duration::from_secs(10), child.wait()).await {
+                Ok(Ok(status)) if status.success() => Ok(()),
+                Ok(Ok(status)) => Err(anyhow!("FFmpeg exited with status {status}")),
+                Ok(Err(error)) => Err(error).context("Failed while waiting for FFmpeg to stop"),
+                Err(_) => {
+                    child.kill().await.context("Failed to terminate FFmpeg")?;
+                    let _ = child.wait().await;
+                    Err(anyhow!("FFmpeg did not stop within 10 seconds"))
+                }
+            }
+        }
+    }
 }

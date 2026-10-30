@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::time::{Duration, sleep, timeout};
 use url::Url;
 
