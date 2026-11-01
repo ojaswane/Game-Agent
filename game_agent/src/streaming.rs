@@ -73,6 +73,20 @@ pub async fn create_connection() -> Result<(webrtc , String)> {
         while sender.read(&mut buffer).await.is_ok() {}
     });
 
-    
+    // SDP offer to send to the client
+    let offer = peer.create_offer(None).await?;
 
+    let mut gathering_complete = peer.gathering_complete_promise().await;
+
+    peer.set_local_description(offer).await?;
+    let _ = gathering_complete.recv().await;
+
+    let local_description = peer.local_description().await.context("Local SDP description is missing")?;
+
+    let offer_sdp = local_description.sdp;
+
+    Ok((
+        WebRtcVideo { peer, track },
+        offer_sdp,
+    ))
 }
