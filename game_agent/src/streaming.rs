@@ -14,3 +14,27 @@ use webrtc::{
     rtp_transceiver::rtp_codec::RTCRtpCodecCapability,
     track::track_local::{track_local_static_sample::TrackLocalStaticSample, TrackLocal},
 };
+
+
+pub Struct webrtc{
+    pub peer: Arc<RTCPeerConnection>,
+    pub track : Arc<TrackLocalStaticSample>,
+}
+
+
+pub async fn create_connection() -> Result<(webrtc , String)> {
+    // Media engine is for H264 codec dependency
+    let mut media_engine = MediaEngine::default();
+    media_engine.register_default_codecs()?;
+
+    // to create the registry for the lost packets
+    let mut registry = Registry::new();
+    register_default_interceptors(&mut registry, &mut media_engine)?;
+
+    let api = APIBuilder::new()
+    .with_media_engine(media_engine)
+    .with_interceptor_registry(registry)
+    .build();
+
+    
+}
