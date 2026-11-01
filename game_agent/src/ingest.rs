@@ -22,23 +22,9 @@ pub async fn ingest() -> Result<()> {
 
     let mut child = Command::new("ffmpeg")
         .args([
-            "-y",
-            "-f",
-            "gdigrab",
-            "-framerate",
-            "60",
-            "-i",
-            &video_input,
-            "-f",
-            "wasapi",
-            "-loopback",
-            "1",
-            "-i",
-            &audio_device,
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
+            "-vf",
+            "scale=1280:720",
+            "-an",
             "-c:v",
             "libx264",
             "-preset",
@@ -49,21 +35,33 @@ pub async fn ingest() -> Result<()> {
             "23",
             "-pix_fmt",
             "yuv420p",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "160k",
-            "-ar",
-            "48000",
-            "-movflags",
-            "+faststart",
-            &output,
+            "-g",
+            "60",
+            "-bf",
+            "0",
+            "-f",
+            "h264",
+            "pipe:1",
+            "-hide_banner",
+            "-loglevel",
+            "warning",
+            "-f",
+            "gdigrab",
+            "-framerate",
+            "60",
+            "-i",
+            &video_input,
         ])
         .stdin(Stdio::piped())
-        .stdout(Stdio::inherit())
+        .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
-        .context("Could not start FFmpeg. Make sure ffmpeg.exe is installed and on PATH.")?;
+        .context("Could not start FFmpeg. ")?;
+
+    let mut stdout = child
+    .stdout
+    .take()
+    .context("Could not access FFmpeg output")?;
 
     let mut frame = vec![0u8; frame_size];
     let mut frame_number = 0u64;
