@@ -36,5 +36,19 @@ pub async fn create_connection() -> Result<(webrtc , String)> {
     .with_interceptor_registry(registry)
     .build();
 
+
+    // we are using the STUN server from google to get the public IP address of the client
+    let config = RTCConfiguration {
+        ice_servers: vec[RTCIceServer] {
+                urls: vec![
+                "stun:stun.l.google.com:19302".to_string(),
+            ],
+            ..Default::default()
+        }
+        ..Default::default()
+    };
+
+    let peer = Arc::new(api.new_peer_connection(config).await?);
+
     
 }
