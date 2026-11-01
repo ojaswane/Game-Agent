@@ -50,5 +50,29 @@ pub async fn create_connection() -> Result<(webrtc , String)> {
 
     let peer = Arc::new(api.new_peer_connection(config).await?);
 
+    let track = Arc::new(TrackLocalStaticSample::new([
+        RTCRtpCodecCapability {
+            mime_type: MIME_TYPE_H264.to_owned(),
+            clock_rate: 90_000,
+            ..Default::default()
+        },
+        "game-video".to_string(),
+        "cloudrig".to_string(), // replace with the actual domain name of the website
+    ]))
+
+    let sender = peer
+        .add_track(
+            Arc::clone(&track) as Arc<dyn TrackLocal + Send + Sync>
+        )
+        .await?;
+
+    // get the local feedback from the peer connection
+    tokio::spawn(async move {
+        let mut buffer = vec![0u8; 1500];
+
+        while sender.read(&mut buffer).await.is_ok() {}
+    });
+
     
+
 }
