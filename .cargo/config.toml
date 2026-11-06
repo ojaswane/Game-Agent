@@ -4,5 +4,4 @@ CC_x86_64_pc_windows_gnu = { value = "D:\\MSYS2\\ucrt64\\bin\\gcc.exe", force = 
 AR_x86_64_pc_windows_gnu = { value = "D:\\MSYS2\\ucrt64\\bin\\ar.exe", force = true }
 
 [target.x86_64-pc-windows-gnu]
-linker = "D:\\MSYS2\\ucrt64\\bin\\gcc.exe"
 rustflags = ["-C", "dlltool=D:\\MSYS2\\ucrt64\\bin\\dlltool.exe"]

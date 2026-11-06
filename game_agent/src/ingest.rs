@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use std::{env, process::Stdio};
 use tokio::{
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     process::Command,
     time::{Duration, timeout},
 };
@@ -59,9 +59,9 @@ pub async fn ingest() -> Result<()> {
         .context("Could not start FFmpeg. ")?;
 
     let mut stdout = child
-    .stdout
-    .take()
-    .context("Could not access FFmpeg output")?;
+        .stdout
+        .take()
+        .context("Could not access FFmpeg output")?;
 
     let mut frame = vec![0u8; frame_size];
     let mut frame_number = 0u64;
@@ -82,16 +82,13 @@ pub async fn ingest() -> Result<()> {
                 // One complete YUV420P frame is now in `frame`.
                 // Next: feed frames into the video encoder/WebRTC pipeline.
             }
-            Err(error)
-                if error.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
+            Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => {
                 break;
             }
             Err(error) => return Err(error.into()),
         }
     }
 
-    
     tokio::select! {
         result = child.wait() => {
             let status = result.context("Failed while waiting for FFmpeg")?;
@@ -120,5 +117,4 @@ pub async fn ingest() -> Result<()> {
             }
         }
     }
-
 }

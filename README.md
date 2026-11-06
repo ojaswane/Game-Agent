@@ -50,3 +50,7 @@ cargo run -- --capture
 ```
 
 Set `GAME_CAPTURE_AUDIO_DEVICE` to a WASAPI playback-device name to capture that device instead of the default. Use FFmpeg's WASAPI device listing to find available names. This is a local file-capture prototype only; it does not yet send video over WebRTC.
+
+## Windows GNU Rust toolchain
+
+The Cargo configuration pins the MSYS2 UCRT64 compiler and archiver for build scripts and the matching `dlltool` for Windows import libraries, while leaving Rust's default linker selection intact. The VS Code workspace prepends `D:\MSYS2\ucrt64\bin` to integrated-terminal `PATH`. Close existing integrated terminals and open a new one after changing the workspace settings.
